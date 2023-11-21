@@ -29,11 +29,13 @@ class Robot:
         self.timestamp = timestamp
         
     def step(self, v, om):
-        # Update the robot's pose
+        # Update the robot's pose, simple kinematics
         self.x += v * np.cos(self.theta) * self.delta_t      
         self.y += v * np.sin(self.theta) * self.delta_t
         self.theta += om * self.delta_t
-        self.battery_level -= v*self.battDrainRate*self.delta_t
+        Vr=v+(0.5*om)
+        Vl=v-(0.5*om)
+        self.battery_level -= self.battDrainRate*(np.absolute(Vr)+np.absolute(Vl))*self.delta_t
 
         # Apply position constraints
         self.x = min(self.max_position, max(-self.max_position, self.x))
@@ -60,7 +62,7 @@ class Robot:
             
 
 # Initialize robot objects RobotID, MaxSpeed,MaxAngularSpeed, MaxPosition
-num_robots = 20  # Number of robots you want to create
+num_robots = 5  # Number of robots you want to create
 
 # Create an empty list to hold robot objects
 jonny = []
@@ -81,12 +83,9 @@ for i in range(num_robots):
 
 
 
-#jonny1=Robot(0,5,1,100,1,0.05)
-#jonny2=Robot(1,5,2,8,1,0.05)
-
 # Update robot data(x,y,v,w,tht,bat,time)
 for i in range(num_robots):
-    jonny[i].update_data(random.uniform(-10, 10), random.uniform(-10, 10), 0, 0, random.uniform(-2*np.pi, 2*np.pi), 98, 0)
+    jonny[i].update_data(random.uniform(-10, 10), random.uniform(-10, 10), 0, 0, random.uniform(-2*np.pi, 2*np.pi), 100, 0)
     
 xdes=np.zeros(num_robots);
 ydes=np.zeros(num_robots);
@@ -115,12 +114,14 @@ X_new=np.zeros((2,num_robots))
 xt=np.zeros((n_iter,num_robots))
 yt=np.zeros((n_iter,num_robots))
 thtt=np.zeros((n_iter,num_robots))
+batt=np.zeros((n_iter,num_robots))
 t=np.zeros((n_iter,num_robots))
 
 for j in range(num_robots):
     xt[0,j]=jonny[j].x
     yt[0,j]=jonny[j].y
     thtt[0,j]=jonny[j].theta
+    batt[0,j]=jonny[j].battery_level
     t[0,j]=0
 
 
@@ -155,6 +156,7 @@ while np.linalg.norm(err)>0.05:
         xt[i,j]=jonny[j].x
         yt[i,j]=jonny[j].y
         thtt[i,j]=jonny[j].theta
+        batt[i,j]=jonny[j].battery_level
         t[i,j]=t[i-1,j]+jonny[j].delta_t
         
     
@@ -180,4 +182,11 @@ for j in range(num_robots):
 
 #plt.legend()
 plt.grid('True')
-plt.show()        
+plt.show(block=False)       
+
+plt.figure()
+for j in range(num_robots):
+    plt.scatter(t[:,j],batt[:,j],s=2,label=f'Jonny {j + 1}')
+
+plt.grid('True')
+plt.show()
